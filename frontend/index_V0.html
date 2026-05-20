@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Freelance Hours Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #18181f;
+    --border: #2a2a35;
+    --border2: #3a3a48;
+    --text: #e8e8f0;
+    --text2: #9090a8;
+    --text3: #5a5a70;
+    --accent: #7c6af7;
+    --accent2: #5b4fd4;
+    --green: #22d3a0;
+    --red: #f75a6a;
+    --amber: #f7a422;
+    --card-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 260px;
+    min-height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transition: transform .3s;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-text {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 42px;
+    margin-top: -2px;
+  }
+
+  .sidebar-today {
+    margin: 12px 20px 0;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    border: 1px solid rgba(34,211,160,0.15);
+  }
+
+  .project-list-header {
+    padding: 16px 20px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .btn-icon {
+    width: 24px; height: 24px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: all .15s;
+  }
+  .btn-icon:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .project-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+
+  .project-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background .15s;
+    margin-bottom: 2px;
+  }
+
+  .project-item:hover { background: var(--bg3); }
+  .project-item.active { background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.3); }
+
+  .project-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .project-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .project-hours {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text3);
+  }
+
+  .sidebar-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+  }
+
+  /* ── Main ── */
+  #main {
+    margin-left: 260px;
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg2);
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .topbar-left h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .topbar-left p {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+
+  .btn-secondary {
+    background: var(--bg3);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: rgba(247,90,106,0.1);
+    color: var(--red);
+    border: 1px solid rgba(247,90,106,0.2);
+  }
+  .btn-danger:hover { background: rgba(247,90,106,0.2); }
+
+  /* ── Content ── */
+  .content { padding: 28px 32px; flex: 1; }
+
+  /* ── KPI Cards ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.accent::before { background: linear-gradient(90deg, var(--accent), #a78bfa); }
+  .kpi-card.green::before { background: linear-gradient(90deg, var(--green), #10b981); }
+  .kpi-card.amber::before { background: linear-gradient(90deg, var(--amber), #f59e0b); }
+  .kpi-card.red::before { background: linear-gradient(90deg, var(--red), #f97316); }
+
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -1px;
+  }
+  .kpi-card.accent .kpi-value { color: var(--accent); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.amber .kpi-value { color: var(--amber); }
+  .kpi-card.red .kpi-value { color: var(--red); }
+
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Grid ── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .chart-grid.full { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-badge {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text3);
+    background: var(--bg3);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .card-body { padding: 20px; }
+
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* ── Log Entry Panel ── */
+  .log-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .log-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .log-form {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+  }
+
+  input, select, textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: border-color .15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  input[type=number] { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Monthly Table ── */
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+
+  tbody tr:hover { background: var(--bg3); }
+  tbody tr:last-child { border-bottom: none; }
+
+  tbody td {
+    padding: 10px 14px;
+    color: var(--text2);
+  }
+
+  td.num {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+
+  .pill-green { background: rgba(34,211,160,0.1); color: var(--green); }
+  .pill-amber { background: rgba(247,164,34,0.1); color: var(--amber); }
+  .pill-accent { background: rgba(124,106,247,0.1); color: var(--accent); }
+
+  /* ── Weekday bars ── */
+  .weekday-bars {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    height: 140px;
+    padding: 0 4px;
+  }
+
+  .weekday-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .weekday-bar-val {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text3);
+  }
+
+  .weekday-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent2) 100%);
+    min-height: 2px;
+    transition: height .4s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+
+  .weekday-label {
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 600;
+  }
+
+  /* ── Recent logs table ── */
+  .inline-edit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .edit-input {
+    width: 64px;
+    padding: 4px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+  }
+
+  .edit-input:focus { outline: none; border-color: var(--accent); }
+
+  .btn-mini {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: all .1s;
+  }
+
+  .btn-save { background: var(--green); color: #000; }
+  .btn-save:hover { opacity: .85; }
+  .btn-del { background: rgba(247,90,106,0.15); color: var(--red); border: 1px solid rgba(247,90,106,0.2); }
+  .btn-del:hover { background: rgba(247,90,106,0.3); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 28px;
+    width: 440px;
+    transform: translateY(16px);
+    transition: transform .2s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
+  }
+
+  .modal-form { display: flex; flex-direction: column; gap: 14px; }
+
+  .modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+  .empty p { font-size: 14px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .25s;
+    pointer-events: none;
+  }
+
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { background: var(--green); color: #000; }
+  #toast.error { background: var(--red); color: white; }
+
+  /* ── Loading ── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text3);
+    gap: 10px;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .color-picker-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .color-opt {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .1s;
+  }
+
+  .color-opt:hover, .color-opt.selected { transform: scale(1.2); border-color: white; }
+
+  /* ── Date navigation ── */
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .date-nav input[type=date] {
+    width: auto;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tag-future {
+    font-size: 10px;
+    color: var(--red);
+    background: rgba(247,90,106,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    #sidebar { width: 220px; }
+    #main { margin-left: 220px; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+    .log-form { grid-template-columns: 1fr 1fr; }
+    .log-form button { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⏱</div>
+      <span class="logo-text">HorasFreelance</span>
+    </div>
+    <div class="logo-sub">v1.0 · tracker</div>
+  </div>
+  <div id="sidebar-today" class="sidebar-today">Cargando fecha...</div>
+
+  <div class="project-list-header">
+    <span>Proyectos</span>
+    <button class="btn-icon" onclick="openNewProject()" title="Nuevo proyecto">+</button>
+  </div>
+
+  <div class="project-list" id="project-list">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+
+  <div class="sidebar-footer">api · fastapi + postgresql</div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="topbar-title">Selecciona un proyecto</h1>
+      <p id="topbar-meta"></p>
+    </div>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="empty">
+      <div class="empty-icon">📊</div>
+      <p>Selecciona un proyecto para ver el dashboard</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo/Editar Proyecto -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <h2 id="modal-title">Nuevo Proyecto</h2>
+    <div class="modal-form">
+      <div class="form-group">
+        <label>Nombre del proyecto</label>
+        <input type="text" id="proj-name" placeholder="ej. ClienteXYZ-App"/>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" id="proj-desc" placeholder="Descripción breve..."/>
+      </div>
+      <div class="form-group">
+        <label>Fecha de inicio</label>
+        <input type="date" id="proj-start"/>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="color-picker-row" id="color-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-project')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProject()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#10b981','#06b6d4','#3b82f6'];
+let TODAY = null;
+let projects = [];
+let activeProjectId = null;
+let editingProjectId = null;
+let dashboardData = null;
+let charts = {};
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 2800);
+}
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: r.statusText }));
+    throw new Error(err.detail || 'Error en la petición');
+  }
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtNum(n, dec = 1) {
+  return parseFloat((n || 0).toFixed(dec));
+}
+
+function isFuture(dateStr) {
+  return dateStr > TODAY;
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+
+async function init() {
+  try {
+    const res = await apiFetch('/today');
+    TODAY = res.today;
+    document.getElementById('sidebar-today').textContent = `Hoy: ${fmtDate(TODAY)}`;
+  } catch {
+    TODAY = new Date().toISOString().slice(0, 10);
+  }
+
+  // Color picker
+  const cp = document.getElementById('color-picker');
+  COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-opt';
+    d.style.background = c;
+    d.dataset.color = c;
+    d.onclick = () => {
+      document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('selected'));
+      d.classList.add('selected');
+    };
+    cp.appendChild(d);
+  });
+  cp.children[0].classList.add('selected');
+
+  await loadProjects();
+}
+
+// ─────────────────────────────────────────────
+// PROJECTS
+// ─────────────────────────────────────────────
+
+async function loadProjects() {
+  const list = document.getElementById('project-list');
+  try {
+    projects = await apiFetch('/projects');
+    renderProjectList();
+    if (projects.length > 0 && !activeProjectId) {
+      selectProject(projects[0].id);
+    }
+  } catch (e) {
+    list.innerHTML = `<div class="empty"><p style="color:var(--red)">Error: ${e.message}</p></div>`;
+  }
+}
+
+function renderProjectList() {
+  const list = document.getElementById('project-list');
+  if (projects.length === 0) {
+    list.innerHTML = '<div class="empty" style="padding:20px"><p>Sin proyectos aún</p></div>';
+    return;
+  }
+  list.innerHTML = projects.map(p => `
+    <div class="project-item ${p.id === activeProjectId ? 'active' : ''}" onclick="selectProject(${p.id})">
+      <div class="project-dot" style="background:${p.color}"></div>
+      <span class="project-name">${p.name}</span>
+      <span class="project-hours">${fmtNum(p.total_hours, 0)}h</span>
+    </div>
+  `).join('');
+}
+
+async function selectProject(id) {
+  activeProjectId = id;
+  renderProjectList();
+  await loadDashboard(id);
+}
+
+function openNewProject() {
+  editingProjectId = null;
+  document.getElementById('modal-title').textContent = 'Nuevo Proyecto';
+  document.getElementById('proj-name').value = '';
+  document.getElementById('proj-desc').value = '';
+  document.getElementById('proj-start').value = TODAY;
+  document.querySelectorAll('.color-opt').forEach((x, i) => x.classList.toggle('selected', i === 0));
+  openModal('modal-project');
+}
+
+function editProject() {
+  const p = projects.find(x => x.id === activeProjectId);
+  if (!p) return;
+  editingProjectId = p.id;
+  document.getElementById('modal-title').textContent = 'Editar Proyecto';
+  document.getElementById('proj-name').value = p.name;
+  document.getElementById('proj-desc').value = p.description || '';
+  document.getElementById('proj-start').value = p.start_date;
+  document.querySelectorAll('.color-opt').forEach(x => {
+    x.classList.toggle('selected', x.dataset.color === p.color);
+  });
+  openModal('modal-project');
+}
+
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  const desc = document.getElementById('proj-desc').value.trim();
+  const start = document.getElementById('proj-start').value;
+  const color = document.querySelector('.color-opt.selected')?.dataset.color || '#6366f1';
+
+  if (!name) { toast('El nombre es requerido', 'error'); return; }
+  if (!start) { toast('La fecha de inicio es requerida', 'error'); return; }
+
+  try {
+    if (editingProjectId) {
+      await apiFetch(`/projects/${editingProjectId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, description: desc, color })
+      });
+      toast('Proyecto actualizado ✓');
+    } else {
+      const p = await apiFetch('/projects', {
+        method: 'POST',
+        body: JSON.stringify({ name, description: desc, start_date: start, color })
+      });
+      toast('Proyecto creado ✓');
+      activeProjectId = p.id;
+    }
+    closeModal('modal-project');
+    await loadProjects();
+    if (activeProjectId) selectProject(activeProjectId);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function deleteProject() {
+  if (!activeProjectId) return;
+  const p = projects.find(x => x.id === activeProjectId);
+  if (!confirm(`¿Eliminar el proyecto "${p?.name}"? Se borrarán todos los registros.`)) return;
+  try {
+    await apiFetch(`/projects/${activeProjectId}`, { method: 'DELETE' });
+    activeProjectId = null;
+    toast('Proyecto eliminado');
+    await loadProjects();
+    document.getElementById('topbar-title').textContent = 'Selecciona un proyecto';
+    document.getElementById('topbar-meta').textContent = '';
+    document.getElementById('topbar-actions').innerHTML = '';
+    document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Selecciona un proyecto para ver el dashboard</p></div>';
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────
+
+async function loadDashboard(projectId) {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div><span>Cargando...</span></div>';
+
+  try {
+    dashboardData = await apiFetch(`/projects/${projectId}/dashboard`);
+    renderDashboard();
+  } catch (e) {
+    content.innerHTML = `<div class="empty"><p style="color:var(--red)">${e.message}</p></div>`;
+  }
+}
+
+function renderDashboard() {
+  const d = dashboardData;
+  const p = d.project;
+
+  // Topbar
+  document.getElementById('topbar-title').textContent = p.name;
+  document.getElementById('topbar-meta').textContent = `Inicio: ${fmtDate(p.start_date)}  ·  ${d.total_days_worked} días trabajados`;
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="btn btn-secondary" onclick="editProject()">✎ Editar</button>
+    <button class="btn btn-danger" onclick="deleteProject()">✕ Eliminar</button>
+  `;
+
+  // Destroy old charts
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  document.getElementById('content').innerHTML = `
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi-card accent">
+        <div class="kpi-label">Total Horas</div>
+        <div class="kpi-value">${fmtNum(d.total_hours, 1)}</div>
+        <div class="kpi-sub">desde ${fmtDate(p.start_date)}</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Días Trabajados</div>
+        <div class="kpi-value">${d.total_days_worked}</div>
+        <div class="kpi-sub">con horas registradas</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">Promedio / Día</div>
+        <div class="kpi-value">${fmtNum(d.avg_hours_per_day, 1)}</div>
+        <div class="kpi-sub">horas por día trabajado</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Mejor Mes</div>
+        <div class="kpi-value" id="kpi-best-month">-</div>
+        <div class="kpi-sub" id="kpi-best-month-sub"></div>
+      </div>
+    </div>
+
+    <!-- Log entry -->
+    <div class="log-panel">
+      <div class="log-panel-header">
+        <span class="card-title">📝 Registrar Horas</span>
+        <span class="card-badge">Solo hasta hoy (${fmtDate(TODAY)})</span>
+      </div>
+      <div class="log-form">
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="log-date" value="${TODAY}" max="${TODAY}" onchange="checkDate(this)"/>
+        </div>
+        <div class="form-group">
+          <label>Horas trabajadas</label>
+          <input type="number" id="log-hours" value="0" min="0" max="24" step="0.5"/>
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <input type="text" id="log-notes" placeholder="¿En qué trabajaste hoy?"/>
+        </div>
+        <button class="btn btn-primary" onclick="saveLog()" style="height:38px;align-self:end">Guardar</button>
+      </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📈 Horas por Mes</span>
+          <span class="card-badge" id="badge-months"></span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📅 Promedio por Día de Semana</span>
+          <span class="card-badge">avg horas</span>
+        </div>
+        <div class="card-body">
+          <div class="weekday-bars" id="weekday-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="chart-grid full">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📊 Historial Diario</span>
+          <span class="card-badge" id="badge-daily"></span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:180px"><canvas id="chart-daily"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly table -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-header">
+        <span class="card-title">📋 Resumen Mensual</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Total Horas</th>
+                <th>Días Trabajados</th>
+                <th>Prom. Diario</th>
+                <th>Intensidad</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent logs -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🗒 Registros Recientes</span>
+        <span class="card-badge">click para editar</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Día</th>
+                <th>Horas</th>
+                <th>Notas</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Populate
+  populateKPIs(d);
+  renderMonthlyChart(d.monthly_averages);
+  renderWeekdayBars(d.weekday_stats);
+  renderDailyChart(d.daily_logs);
+  renderMonthlyTable(d.monthly_averages);
+  renderLogsTable(d.daily_logs);
+  preloadTodayLog();
+}
+
+function populateKPIs(d) {
+  if (d.monthly_averages.length > 0) {
+    const best = [...d.monthly_averages].sort((a, b) => b.total_hours - a.total_hours)[0];
+    document.getElementById('kpi-best-month').textContent = fmtNum(best.total_hours, 0) + 'h';
+    document.getElementById('kpi-best-month-sub').textContent = `${best.month_name} ${best.year}`;
+  }
+  document.getElementById('badge-months').textContent = `${d.monthly_averages.length} meses`;
+  document.getElementById('badge-daily').textContent = `${d.daily_logs.length} sesiones`;
+}
+
+function renderMonthlyChart(monthly) {
+  const labels = monthly.map(m => `${m.month_name.slice(0,3)} ${m.year}`);
+  const totals = monthly.map(m => m.total_hours);
+  const avgs = monthly.map(m => m.avg_daily_hours);
+  const color = dashboardData.project.color;
+
+  const ctx = document.getElementById('chart-monthly');
+  charts.monthly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total horas',
+          data: totals,
+          backgroundColor: color + 'cc',
+          borderColor: color,
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Prom diario',
+          data: avgs,
+          type: 'line',
+          borderColor: '#22d3a0',
+          backgroundColor: 'transparent',
+          pointBackgroundColor: '#22d3a0',
+          pointRadius: 3,
+          tension: 0.3,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#9090a8', font: { family: 'Space Grotesk', size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#5a5a70', font: { size: 10 } }, grid: { color: '#2a2a35' } },
+        y: { ticks: { color: '#5a5a70', font: { size: 10 } }, grid: { color: '#2a2a35' }, position: 'left' },
+        y1: { ticks: { color: '#22d3a0', font: { size: 10 } }, grid: { display: false }, position: 'right' }
+      }
+    }
+  });
+}
+
+function renderWeekdayBars(stats) {
+  const container = document.getElementById('weekday-bars');
+  const maxAvg = Math.max(...stats.map(s => s.avg_hours), 0.1);
+  container.innerHTML = stats.map(s => {
+    const h = Math.round((s.avg_hours / maxAvg) * 110);
+    const shortName = s.weekday.slice(0, 3);
+    return `
+      <div class="weekday-bar-wrap">
+        <div class="weekday-bar-val">${s.avg_hours > 0 ? s.avg_hours + 'h' : ''}</div>
+        <div class="weekday-bar" style="height:${h}px;opacity:${s.count > 0 ? 1 : 0.2}"></div>
+        <div class="weekday-label">${shortName}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDailyChart(logs) {
+  const sorted = [...logs].sort((a, b) => a.log_date.localeCompare(b.log_date));
+  const labels = sorted.map(l => fmtDate(l.log_date));
+  const data = sorted.map(l => l.hours);
+  const color = dashboardData.project.color;
+
+  const ctx = document.getElementById('chart-daily');
+  charts.daily = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Horas',
+        data,
+        backgroundColor: color + '99',
+        borderColor: color,
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#5a5a70', font: { size: 9 }, maxTicksLimit: 20, maxRotation: 45 }, grid: { color: '#2a2a35' } },
+        y: { ticks: { color: '#5a5a70', font: { size: 10 } }, grid: { color: '#2a2a35' } }
+      }
+    }
+  });
+}
+
+function renderMonthlyTable(monthly) {
+  const maxHours = Math.max(...monthly.map(m => m.total_hours), 1);
+  document.getElementById('monthly-tbody').innerHTML = monthly.slice().reverse().map(m => {
+    const pct = Math.round((m.total_hours / maxHours) * 100);
+    let pillClass = pct >= 70 ? 'pill-green' : pct >= 40 ? 'pill-amber' : 'pill-accent';
+    return `
+      <tr>
+        <td>${m.month_name} ${m.year}</td>
+        <td class="num">${fmtNum(m.total_hours, 1)}h</td>
+        <td class="num">${m.working_days}</td>
+        <td class="num">${fmtNum(m.avg_daily_hours, 1)}h</td>
+        <td><span class="pill ${pillClass}">${pct}%</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderLogsTable(logs) {
+  const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const sorted = [...logs].sort((a, b) => b.log_date.localeCompare(a.log_date)).slice(0, 50);
+  document.getElementById('logs-tbody').innerHTML = sorted.map(l => {
+    const dt = new Date(l.log_date + 'T12:00:00');
+    const dayName = DAYS_ES[dt.getDay()];
+    const canEdit = l.log_date <= TODAY;
+    return `
+      <tr>
+        <td class="num">${fmtDate(l.log_date)}</td>
+        <td>${dayName}</td>
+        <td>
+          <div class="inline-edit">
+            <input class="edit-input" type="number" value="${l.hours}" min="0" max="24" step="0.5"
+              id="edit-h-${l.log_date}" ${canEdit ? '' : 'disabled'} />
+            ${canEdit ? `<button class="btn-mini btn-save" onclick="updateLogInline('${l.log_date}')">✓</button>` : '<span class="tag-future">futuro</span>'}
+          </div>
+        </td>
+        <td style="color:var(--text3);font-size:12px">${l.notes || '—'}</td>
+        <td>
+          ${canEdit ? `<button class="btn-mini btn-del" onclick="deleteLog('${l.log_date}')">✕</button>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function preloadTodayLog() {
+  try {
+    const log = await apiFetch(`/projects/${activeProjectId}/log/${TODAY}`);
+    if (log) {
+      document.getElementById('log-hours').value = log.hours;
+      document.getElementById('log-notes').value = log.notes || '';
+    }
+  } catch { /* no log today yet, fine */ }
+}
+
+function checkDate(input) {
+  if (input.value > TODAY) {
+    input.value = TODAY;
+    toast('No puedes registrar horas en el futuro', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// LOG OPERATIONS
+// ─────────────────────────────────────────────
+
+async function saveLog() {
+  const logDate = document.getElementById('log-date').value;
+  const hours = parseFloat(document.getElementById('log-hours').value) || 0;
+  const notes = document.getElementById('log-notes').value.trim();
+
+  if (!logDate) { toast('Selecciona una fecha', 'error'); return; }
+  if (logDate > TODAY) { toast('No puedes registrar horas en el futuro', 'error'); return; }
+  if (hours < 0 || hours > 24) { toast('Las horas deben ser entre 0 y 24', 'error'); return; }
+
+  try {
+    await apiFetch('/logs', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: activeProjectId, log_date: logDate, hours, notes: notes || null })
+    });
+    toast(`Guardado: ${hours}h el ${fmtDate(logDate)} ✓`);
+    await loadDashboard(activeProjectId);
+    await loadProjects();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function updateLogInline(dateStr) {
+  const input = document.getElementById(`edit-h-${dateStr}`);
+  const hours = parseFloat(input.value) || 0;
+
+  try {
+    // Get log id first
+    const log = await apiFetch(`/projects/${activeProjectId}/log/${dateStr}`);
+    await apiFetch(`/logs/${log.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ hours, notes: null })
+    });
+    toast(`Actualizado: ${hours}h el ${fmtDate(dateStr)} ✓`);
+    await loadDashboard(activeProjectId);
+    await loadProjects();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function deleteLog(dateStr) {
+  if (!confirm(`¿Eliminar el registro del ${fmtDate(dateStr)}?`)) return;
+  try {
+    const log = await apiFetch(`/projects/${activeProjectId}/log/${dateStr}`);
+    await apiFetch(`/logs/${log.id}`, { method: 'DELETE' });
+    toast('Registro eliminado');
+    await loadDashboard(activeProjectId);
+    await loadProjects();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

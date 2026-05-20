@@ -1,0 +1,10 @@
+# PostgreSQL / Docker volumes
+pgdata/
+data/
+*.sql
+*.dump
+
+# Variables de entorno (contiene credenciales de la BD)
+.env
+.env.local
+.env.production
