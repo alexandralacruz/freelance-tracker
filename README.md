@@ -5,7 +5,7 @@ Control de horas trabajadas por proyecto freelance.
 
 ---
 
-## 🚀 Arranque rápido con Docker (recomendado)
+## Arranque rápido con Docker (recomendado)
 
 ```bash
 # 1. Clona / descomprime el proyecto
